@@ -12,6 +12,8 @@ fi
 (/usr/local/bin/k3s-killall.sh || true) && (/usr/local/bin/k3s-uninstall.sh || true) && (docker rm $(docker ps --filter="label=io.kubernetes.pod.name" -aq) --force || true)
 # install k3s
 curl -sfL https://get.k3s.io | bash
+chown $USER ~/.kube/k3s_config
+chmod 0600 ~/.kube/k3s_config
 KUBECONFIG=~/.kube/k3s_config kubectl config rename-context default k3s
 
 echo -e "k3s has been installed!\nCheck if it works:\nKUBECONFIG=~/.kube/k3s_config kubectl get pods -A"
