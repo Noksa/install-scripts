@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+trap 'exit 0' SIGINT SIGTERM
+
 set -eo pipefail
 if [[ -z "${INSTALL_K3S_VERSION:-}" ]]; then
   export INSTALL_K3S_VERSION
