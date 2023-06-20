@@ -3,13 +3,14 @@
 trap 'exit 0' SIGINT SIGTERM
 
 set -eo pipefail
-if [[ -z "${INSTALL_K3S_VERSION:-}" ]]; then
+if [[ -n "${INSTALL_K3S_VERSION:-}" ]]; then
   export INSTALL_K3S_VERSION
 fi
 
-if [[ -z "${INSTALL_K3S_EXEC:-}" ]]; then 
+if [[ -n "${INSTALL_K3S_EXEC:-}" ]]; then 
   export INSTALL_K3S_EXEC
 fi
+
 # delete old k3s if any and stop/remove k8s containers if they still remain
 (/usr/local/bin/k3s-killall.sh || true) && (/usr/local/bin/k3s-uninstall.sh || true) && (docker rm $(docker ps --filter="label=io.kubernetes.pod.name" -aq) --force || true)
 # install k3s
