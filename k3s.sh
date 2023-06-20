@@ -14,6 +14,8 @@ fi
 curl -sfL https://get.k3s.io | bash
 chown $USER ~/.kube/k3s_config
 chmod 0600 ~/.kube/k3s_config
+# ensure that ~/.kube directory has execute permission for us
+chmod 0700 ~/.kube
 KUBECONFIG=~/.kube/k3s_config kubectl config rename-context default k3s
 
 echo -e "k3s has been installed!\nCheck if it works:\nKUBECONFIG=~/.kube/k3s_config kubectl get pods -A"
