@@ -11,6 +11,7 @@ fi
 # delete old k3s if any and stop/remove k8s containers if they still remain
 (/usr/local/bin/k3s-killall.sh || true) && (/usr/local/bin/k3s-uninstall.sh || true) && (docker rm $(docker ps --filter="label=io.kubernetes.pod.name" -aq) --force || true)
 # install k3s
+echo -e "\nHOME: $HOME\nUSER: $USER\n"
 curl -sfL https://get.k3s.io | bash
 chown $USER ~/.kube/k3s_config
 chmod 0600 ~/.kube/k3s_config
