@@ -16,10 +16,12 @@ fi
 # install k3s
 echo -e "\nHOME: $HOME\nUSER: $USER\n"
 curl -sfL https://get.k3s.io | bash
-chown $USER ~/.kube/k3s_config
-chmod 0600 ~/.kube/k3s_config
+
+chown "${USER}" /etc/rancher/k3s/k3s.yaml
+chmod 0600 /etc/rancher/k3s/k3s.yaml
 # ensure that ~/.kube directory has execute permission for us
 chmod 0700 ~/.kube
+cp /etc/rancher/k3s/k3s.yaml ~/.kube/k3s_config || true
 KUBECONFIG=~/.kube/k3s_config kubectl config rename-context default k3s
 
 echo -e "k3s has been installed!\nCheck if it works:\nKUBECONFIG=~/.kube/k3s_config kubectl get pods -A"
