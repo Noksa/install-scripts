@@ -75,15 +75,11 @@ echo -e "${D}│${X} ${W}USER${X}    ${C}→${X} ${G}$USER${X}"
 echo -e "${D}└─────────────────────────────────────────────────────────────────────────────┘${X}"
 echo ""
 
-K3S_LOG="/tmp/k3s-install-$$.log"
 log "Downloading and installing k3s..."
-log "Logs: ${G}${K3S_LOG}${X}"
-if curl -sfL https://get.k3s.io | bash >"$K3S_LOG" 2>&1; then
+if curl -sfL https://get.k3s.io | bash; then
   ok "K3s installed successfully"
-  grep -oP '(?<=Using )v[^\s]+' "$K3S_LOG" 2>/dev/null && ok "Version: $(grep -oP '(?<=Using )v[^\s]+' "$K3S_LOG")" || true
 else
-  err "Installation failed! Check logs: $K3S_LOG"
-  tail -20 "$K3S_LOG"
+  err "Installation failed!"
   exit 1
 fi
 
