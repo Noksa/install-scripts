@@ -39,11 +39,11 @@ spin() {
   local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
   while kill -0 "$pid" 2>/dev/null; do
     for f in "${frames[@]}"; do
-      printf "\r${M}%s${X} %s" "$f" "$msg"
+      echo -ne "\r\033[38;5;201m${f}\033[0m ${msg}"
       sleep 0.1
     done
   done
-  printf "\r\033[K"
+  echo -ne "\r\033[K"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
