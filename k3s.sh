@@ -19,11 +19,11 @@ curl -sfL https://get.k3s.io | bash
 
 chown "${USER}" /etc/rancher/k3s/k3s.yaml
 chmod 0600 /etc/rancher/k3s/k3s.yaml
-# ensrure directory exists
-mkdir -p ~/.kube
-# ensure that ~/.kube directory has execute permission for us
-chmod 0700 ~/.kube
-cp /etc/rancher/k3s/k3s.yaml ~/.kube/k3s_config || true
-KUBECONFIG=~/.kube/k3s_config kubectl config rename-context default k3s
+mkdir -p "${$HOME}/.kube"
+rm -rf "${$HOME}/.kube/k3s_config"
+# ensure that $HOME/.kube directory has execute permission for us
+chmod 0700 "${$HOME}/.kube"
+cp /etc/rancher/k3s/k3s.yaml "${$HOME}/.kube/k3s_config" || true
+KUBECONFIG="${$HOME}/.kube/k3s_config" kubectl config rename-context default k3s
 
 echo -e "k3s has been installed!\nCheck if it works:\nKUBECONFIG=~/.kube/k3s_config kubectl get pods -A"
