@@ -43,7 +43,7 @@ cyber_log "Removing previous k3s installation..."
 cyber_log "Cleaning orphaned kubernetes containers..."
 containers=$(docker ps --filter="label=io.kubernetes.pod.name" -aq 2>/dev/null || true)
 if [[ -n "$containers" ]]; then
-  docker rm $containers --force >/dev/null 2>&1 && cyber_ok "Containers purged" || cyber_warn "No containers to remove"
+  docker rm "$containers" --force >/dev/null 2>&1 && cyber_ok "Containers purged" || cyber_warn "No containers to remove"
 else
   cyber_warn "No orphaned containers found"
 fi
