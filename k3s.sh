@@ -87,10 +87,19 @@ echo -e "${D}│${X} ${W}USER${X}    ${C}→${X} ${G}$USER${X}"
 echo -e "${D}└─────────────────────────────────────────────────────────────────────────────┘${X}"
 echo ""
 
+K3S_LOG="/tmp/k3s-install-$$.log"
 log "Downloading and installing k3s..."
-curl -sfL https://get.k3s.io | bash &
+log "Logs: ${G}${K3S_LOG}${X}"
+curl -sfL https://get.k3s.io | bash >"$K3S_LOG" 2>&1 &
 spin $! "Installing k3s cluster..."
-wait $! && ok "K3s installed successfully" || { err "Installation failed!"; exit 1; }
+if wait $!; then
+  ok "K3s installed successfully"
+  grep -oP '(?<=Using )v[^\s]+' "$K3S_LOG" 2>/dev/null && ok "Version: $(grep -oP '(?<=Using )v[^\s]+' "$K3S_LOG")" || true
+else
+  err "Installation failed! Check logs: $K3S_LOG"
+  tail -20 "$K3S_LOG"
+  exit 1
+fi
 
 # ═══════════════════════════════════════════════════════════════════════════════
 step "PHASE 3: CONFIGURE KUBECONFIG"
