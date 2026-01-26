@@ -19,6 +19,8 @@ curl -sfL https://get.k3s.io | bash
 
 chown "${USER}" /etc/rancher/k3s/k3s.yaml
 chmod 0600 /etc/rancher/k3s/k3s.yaml
+# ensrure directory exists
+mkdir -p ~/.kube
 # ensure that ~/.kube directory has execute permission for us
 chmod 0700 ~/.kube
 cp /etc/rancher/k3s/k3s.yaml ~/.kube/k3s_config || true
