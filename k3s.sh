@@ -71,10 +71,6 @@ fi
 cyber_step "PHASE 3: CONFIGURE KUBECONFIG"
 # ═══════════════════════════════════════════════════════════════════════════════
 
-cyber_log "Setting up kubeconfig permissions..."
-chown "${USER}" /etc/rancher/k3s/k3s.yaml
-chmod 0600 /etc/rancher/k3s/k3s.yaml
-cyber_ok "Permissions configured"
 
 cyber_log "Creating kubeconfig directory..."
 mkdir -p "${HOME}/.kube"
@@ -82,13 +78,15 @@ chmod 0700 "${HOME}/.kube"
 chown "${USER}" "${HOME}/.kube"
 cyber_ok "Directory ready: ${HOME}/.kube"
 
+REAL_KUBECONFIG_PATH="${HOME}/.kube/k3s_config"
 cyber_log "Copying kubeconfig..."
-rm -rf "${HOME}/.kube/k3s_config"
-cp /etc/rancher/k3s/k3s.yaml "${HOME}/.kube/k3s_config"
+rm -rf "${REAL_KUBECONFIG_PATH}"
+cp /etc/rancher/k3s/k3s.yaml "${REAL_KUBECONFIG_PATH}"
 cyber_ok "Kubeconfig copied"
+chown "${USER}" "${REAL_KUBECONFIG_PATH}"
 
 cyber_log "Renaming context to 'k3s'..."
-KUBECONFIG="${HOME}/.kube/k3s_config" kubectl config rename-context default k3s >/dev/null
+KUBECONFIG="${REAL_KUBECONFIG_PATH}" kubectl config rename-context default k3s >/dev/null
 cyber_ok "Context renamed"
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -113,7 +111,7 @@ echo -e "${CYBER_X}"
 echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
 echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}🔥 QUICK START${CYBER_X}                                                            ${CYBER_D}│${CYBER_X}"
 echo -e "${CYBER_D}│${CYBER_X}                                                                             ${CYBER_D}│${CYBER_X}"
-echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}export KUBECONFIG=~/.kube/k3s_config${CYBER_X}                                      ${CYBER_D}│${CYBER_X}"
+echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}export KUBECONFIG=\"${REAL_KUBECONFIG_PATH}\"${CYBER_X}                                      ${CYBER_D}│${CYBER_X}"
 echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}kubectl get pods -A${CYBER_X}                                                       ${CYBER_D}│${CYBER_X}"
 echo -e "${CYBER_D}│${CYBER_X}                                                                             ${CYBER_D}│${CYBER_X}"
 echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
