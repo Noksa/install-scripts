@@ -39,6 +39,7 @@ cyber_log "Terminating existing k3s processes..."
 
 cyber_log "Removing previous k3s installation..."
 /usr/local/bin/k3s-uninstall.sh 2>/dev/null && cyber_ok "Old k3s removed" || cyber_warn "No previous installation"
+rm -rf /etc/rancher/k3s/k3s.yaml
 
 cyber_log "Cleaning orphaned kubernetes containers..."
 containers=$(docker ps --filter="label=io.kubernetes.pod.name" -aq 2>/dev/null || true)
