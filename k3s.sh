@@ -79,6 +79,7 @@ cyber_ok "Permissions configured"
 cyber_log "Creating kubeconfig directory..."
 mkdir -p "${HOME}/.kube"
 chmod 0700 "${HOME}/.kube"
+chown "${USER}" "${HOME}/.kube"
 cyber_ok "Directory ready: ${HOME}/.kube"
 
 cyber_log "Copying kubeconfig..."
