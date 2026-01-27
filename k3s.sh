@@ -84,11 +84,11 @@ cyber_log "Copying kubeconfig..."
 rm -rf "${REAL_KUBECONFIG_PATH}"
 cp /etc/rancher/k3s/k3s.yaml "${REAL_KUBECONFIG_PATH}"
 cyber_ok "Kubeconfig copied"
-chown "${USER}" "${REAL_KUBECONFIG_PATH}"
-
 cyber_log "Renaming context to 'k3s'..."
 KUBECONFIG="${REAL_KUBECONFIG_PATH}" kubectl config rename-context default k3s >/dev/null
 cyber_ok "Context renamed"
+chown "${USER}" "${REAL_KUBECONFIG_PATH}"
+chmod 0600 "${REAL_KUBECONFIG_PATH}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 cyber_step "DEPLOYMENT COMPLETE"
