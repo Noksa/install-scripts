@@ -175,6 +175,12 @@ check_k3s_compat() {
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}API${CYBER_X}      ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_api${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}MIN API${CYBER_X}  ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_min_api${CYBER_X}"
     echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
+    
+    # Check if Docker version is known
+    local local_major=$(echo "$local_docker_ver" | cut -d. -f1)
+    if [[ -z "${DOCKER_API_MAP[$local_major]:-}" ]]; then
+        cyber_warn "Docker $local_major.x is not in known versions list - using reported min API $local_docker_min_api"
+    fi
     echo ""
     
     cyber_step "ANALYZING K3S $k3s_tag"
@@ -208,11 +214,10 @@ check_k3s_compat() {
     cyber_step "DOCKER DAEMON COMPATIBILITY MATRIX"
     cyber_log "Building compatibility matrix..."
     
-    # Get local Docker major version and build range around it
-    local local_major=$(echo "$local_docker_ver" | cut -d. -f1)
+    # Build range around local Docker version
     local min_ver=$((local_major - VERSION_RANGE))
     local max_ver=$((local_major + VERSION_RANGE))
-    [[ $min_ver -lt 24 ]] && min_ver=24
+    [[ $min_ver -lt 23 ]] && min_ver=23
     
     echo ""
     echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
