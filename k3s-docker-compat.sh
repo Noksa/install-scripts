@@ -11,9 +11,7 @@ set -eo pipefail
 source <(curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/cyberpunk.sh)
 trap 'cyber_trap' SIGINT SIGTERM
 
-CACHE_DIR="${HOME}/.cache/k3s-docker-compat"
-CACHE_TTL=86400
-USE_CACHE="true"
+
 
 banner() {
 cat << 'EOF'
@@ -44,7 +42,6 @@ print_usage() {
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-k, --k3s-version VERSION${CYBER_X}    Check compatibility for k3s version/tag"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-c, --check [VERSION]${CYBER_X}        Check against local Docker"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-l, --list-releases${CYBER_X}          List recent k3s releases"
-    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}--no-cache${CYBER_X}                   Bypass cache"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-h, --help${CYBER_X}                   Show this help"
     echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}EXAMPLES:${CYBER_X}"
@@ -60,24 +57,11 @@ ensure_deps() {
     done
 }
 
-init_cache() { mkdir -p "$CACHE_DIR"; }
 
-get_cached() {
-    local cache_file="$CACHE_DIR/$1"
-    [[ -f "$cache_file" && "$USE_CACHE" == "true" ]] || return 1
-    local age=$(($(date +%s) - $(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file")))
-    [[ $age -lt $CACHE_TTL ]] && cat "$cache_file" && return 0
-    return 1
-}
-
-set_cached() { echo "$2" > "$CACHE_DIR/$1"; }
 
 # Fetch both DefaultVersion and MinSupportedAPIVersion from moby/moby
 get_docker_api_info() {
     local docker_major=$1
-    local cache_key="docker_api_info_${docker_major}"
-    
-    get_cached "$cache_key" 2>/dev/null && return 0
     
     # Find latest tag for this major version
     local tag=$(curl -sf "https://api.github.com/repos/moby/moby/tags?per_page=100" | \
@@ -86,7 +70,6 @@ get_docker_api_info() {
     if [[ -z "$tag" ]]; then
         # Fallback for unreleased versions - Docker 29+ requires minimum 1.44
         if [[ "$docker_major" -ge 29 ]]; then
-            set_cached "$cache_key" "1.52:1.44"
             echo "1.52:1.44"
             return 0
         fi
@@ -100,32 +83,29 @@ get_docker_api_info() {
     local default_ver=$(echo "$api_common" | grep 'DefaultVersion.*=' | grep -o '"[0-9.]*"' | tr -d '"' | head -1)
     local min_ver=$(echo "$api_common" | grep 'MinSupportedAPIVersion.*=' | grep -o '"[0-9.]*"' | tr -d '"' | head -1)
     
-    local result="${default_ver:-unknown}:${min_ver:-1.24}"
-    set_cached "$cache_key" "$result"
-    echo "$result"
+    echo "${default_ver:-unknown}:${min_ver:-1.24}"
 }
 
 get_k3s_cridockerd_version() {
     local k3s_tag=$1
-    local cache_key="k3s_cridockerd_${k3s_tag//[\/+]/_}"
-    
-    get_cached "$cache_key" 2>/dev/null && return 0
     
     local go_mod=$(curl -sf "https://raw.githubusercontent.com/k3s-io/k3s/${k3s_tag}/go.mod")
     
     [[ -z "$go_mod" ]] && { echo "error"; return 1; }
     
-    local ver=$(echo "$go_mod" | grep 'k3s-io/cri-dockerd' | sed -E 's/.*k3s-io\/cri-dockerd[[:space:]]+([v0-9.\-k3s]+).*/\1/' | head -1)
-    [[ -z "$ver" ]] && ver=$(echo "$go_mod" | grep 'Mirantis/cri-dockerd' | sed -E 's/.*Mirantis\/cri-dockerd[[:space:]]+([v0-9.]+).*/\1/' | head -1)
+    # k3s uses replace directives to point to k3s-io fork with specific tags like v0.3.12-k3s1.28
+    # First check for replace directive: github.com/Mirantis/cri-dockerd => github.com/k3s-io/cri-dockerd v0.3.12-k3s1.28
+    local ver=$(echo "$go_mod" | grep -E 'Mirantis/cri-dockerd\s+=>' | sed -E 's/.*k3s-io\/cri-dockerd[[:space:]]+([^[:space:]]+).*/\1/' | head -1)
     
-    [[ -n "$ver" ]] && { set_cached "$cache_key" "$ver"; echo "$ver"; } || echo "unknown"
+    # Fallback to direct dependency if no replace
+    [[ -z "$ver" ]] && ver=$(echo "$go_mod" | grep 'k3s-io/cri-dockerd' | grep -v '=>' | sed -E 's/.*k3s-io\/cri-dockerd[[:space:]]+([^[:space:]]+).*/\1/' | head -1)
+    [[ -z "$ver" ]] && ver=$(echo "$go_mod" | grep 'Mirantis/cri-dockerd' | grep -v '=>' | sed -E 's/.*Mirantis\/cri-dockerd[[:space:]]+([^[:space:]]+).*/\1/' | head -1)
+    
+    [[ -n "$ver" ]] && echo "$ver" || echo "unknown"
 }
 
 get_cridockerd_docker_version() {
     local cridockerd_ver=$1
-    local cache_key="cridockerd_docker_${cridockerd_ver//[\/+]/_}"
-    
-    get_cached "$cache_key" 2>/dev/null && return 0
     
     local go_mod=$(curl -sf "https://raw.githubusercontent.com/k3s-io/cri-dockerd/${cridockerd_ver}/go.mod")
     [[ -z "$go_mod" ]] && go_mod=$(curl -sf "https://raw.githubusercontent.com/Mirantis/cri-dockerd/${cridockerd_ver}/go.mod")
@@ -133,14 +113,11 @@ get_cridockerd_docker_version() {
     [[ -z "$go_mod" ]] && { echo "unknown"; return 1; }
     
     local ver=$(echo "$go_mod" | grep 'docker/docker' | sed -E 's/.*docker\/docker[[:space:]]+([v0-9.+incompatible]+).*/\1/' | head -1)
-    [[ -n "$ver" ]] && { set_cached "$cache_key" "$ver"; echo "$ver"; } || echo "unknown"
+    [[ -n "$ver" ]] && echo "$ver" || echo "unknown"
 }
 
 get_docker_api_version() {
     local docker_ver=$1
-    local cache_key="docker_api_${docker_ver//[\/+]/_}"
-    
-    get_cached "$cache_key" 2>/dev/null && return 0
     
     local clean_ver=$(echo "$docker_ver" | sed 's/+incompatible//')
     
@@ -148,7 +125,7 @@ get_docker_api_version() {
     [[ -z "$api_common" ]] && { echo "unknown"; return 1; }
     
     local api_ver=$(echo "$api_common" | grep 'DefaultVersion.*=' | grep -o '"[0-9.]*"' | tr -d '"' | head -1)
-    [[ -n "$api_ver" ]] && { set_cached "$cache_key" "$api_ver"; echo "$api_ver"; } || echo "unknown"
+    [[ -n "$api_ver" ]] && echo "$api_ver" || echo "unknown"
 }
 
 compare_versions() {
@@ -340,7 +317,6 @@ check_system() {
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ensure_deps
-init_cache
 
 # Show banner
 echo -e "${CYBER_M}"
@@ -363,7 +339,6 @@ while [[ $# -gt 0 ]]; do
             fi
             exit $? ;;
         -l|--list-releases) list_k3s_releases; exit 0 ;;
-        --no-cache) USE_CACHE="false"; shift; continue ;;
         -h|--help) print_usage; exit 0 ;;
         *) cyber_err "Unknown option: $1"; print_usage; exit 1 ;;
     esac
