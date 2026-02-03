@@ -36,18 +36,16 @@ print_usage() {
     echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}📖 USAGE${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}"
-    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}$0 [OPTIONS]${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}$0 -k <VERSION>${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}OPTIONS:${CYBER_X}"
-    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-k, --k3s-version VERSION${CYBER_X}    Check compatibility for k3s version/tag"
-    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-c, --check [VERSION]${CYBER_X}        Check against local Docker"
+    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-k, --k3s-version VERSION${CYBER_X}    Check k3s version against local Docker"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-l, --list-releases${CYBER_X}          List recent k3s releases"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-h, --help${CYBER_X}                   Show this help"
     echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}EXAMPLES:${CYBER_X}"
-    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 --k3s-version v1.29.0+k3s1${CYBER_X}"
-    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 --check${CYBER_X}"
-    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 --check v1.30.0+k3s1${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -k v1.29.0+k3s1${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -l${CYBER_X}"
     echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
 }
 
@@ -132,10 +130,6 @@ compare_versions() {
     [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" == "$2" ]]
 }
 
-get_k3s_version() {
-    command -v k3s &>/dev/null && k3s --version 2>/dev/null | grep -oP 'v[0-9]+\.[0-9]+\.[0-9]+\+k3s[0-9]+' || echo "not_installed"
-}
-
 get_docker_version() {
     command -v docker &>/dev/null && docker version --format '{{.Server.Version}}' 2>/dev/null || echo "not_installed"
 }
@@ -175,16 +169,19 @@ check_k3s_compat() {
     local local_docker_api=$(get_docker_api_local)
     local local_docker_min_api=$(get_docker_min_api_local)
     
-    if [[ "$local_docker_ver" != "not_installed" ]]; then
-        echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}🐳 LOCAL DOCKER${CYBER_X}"
-        echo -e "${CYBER_D}│${CYBER_X}"
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}VERSION${CYBER_X}  ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_ver${CYBER_X}"
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}API${CYBER_X}      ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_api${CYBER_X}"
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}MIN API${CYBER_X}  ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_min_api${CYBER_X}"
-        echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
-        echo ""
+    if [[ "$local_docker_ver" == "not_installed" ]]; then
+        cyber_err "Docker is not installed"
+        return 1
     fi
+    
+    echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}🐳 LOCAL DOCKER${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}VERSION${CYBER_X}  ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_ver${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}API${CYBER_X}      ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_api${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}MIN API${CYBER_X}  ${CYBER_C}→${CYBER_X} ${CYBER_G}$local_docker_min_api${CYBER_X}"
+    echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
+    echo ""
     
     cyber_step "ANALYZING K3S $k3s_tag"
     
@@ -217,98 +214,55 @@ check_k3s_compat() {
     cyber_step "DOCKER DAEMON COMPATIBILITY MATRIX"
     cyber_log "Building compatibility matrix..."
     
+    # Get local Docker major version and build range around it
+    local local_major=$(echo "$local_docker_ver" | cut -d. -f1)
+    local min_ver=$((local_major - 1))
+    local max_ver=$((local_major + 1))
+    [[ $min_ver -lt 24 ]] && min_ver=24
+    
     echo ""
     echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
     printf "${CYBER_D}│${CYBER_X}  ${CYBER_C}%-15s${CYBER_X} ${CYBER_C}%-10s${CYBER_X} ${CYBER_C}%-10s${CYBER_X} ${CYBER_C}%-20s${CYBER_X}      ${CYBER_D}│${CYBER_X}\n" "DOCKER" "API" "MIN API" "COMPATIBLE"
     echo -e "${CYBER_D}├─────────────────────────────────────────────────────────────────────────────┤${CYBER_X}"
     
-    for dv in 29 28 27 26 25 24; do
+    for ((dv=max_ver; dv>=min_ver; dv--)); do
         local api_info=$(get_docker_api_info "$dv" 2>/dev/null)
         local max_api=$(echo "$api_info" | cut -d: -f1)
         local min_api=$(echo "$api_info" | cut -d: -f2)
+        [[ "$max_api" == "unknown" ]] && continue
         local compat="YES"
         local compat_color="${CYBER_G}"
         if ! compare_versions "$api_version" "$min_api"; then
             compat="NO (needs >=$min_api)"
             compat_color="${CYBER_R}"
         fi
-        printf "${CYBER_D}│${CYBER_X}  ${CYBER_W}%-15s${CYBER_X} ${CYBER_Y}%-10s${CYBER_X} ${CYBER_Y}%-10s${CYBER_X} ${compat_color}%-20s${CYBER_X}      ${CYBER_D}│${CYBER_X}\n" "${dv}.x" "$max_api" "$min_api" "$compat"
+        local label="${dv}.x"
+        [[ "$dv" == "$local_major" ]] && label="${dv}.x (local)"
+        printf "${CYBER_D}│${CYBER_X}  ${CYBER_W}%-15s${CYBER_X} ${CYBER_Y}%-10s${CYBER_X} ${CYBER_Y}%-10s${CYBER_X} ${compat_color}%-20s${CYBER_X}      ${CYBER_D}│${CYBER_X}\n" "$label" "$max_api" "$min_api" "$compat"
     done
     
     echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
     echo ""
     cyber_ok "Summary: k3s $k3s_tag uses API $api_version"
     
-    # Show verdict against local Docker if available
-    if [[ "$local_docker_ver" != "not_installed" ]]; then
-        echo ""
-        cyber_step "LOCAL COMPATIBILITY VERDICT"
-        
-        if compare_versions "$api_version" "$local_docker_min_api"; then
-            cyber_ok "GOOD: k3s $k3s_tag (API $api_version) works with your Docker $local_docker_ver (min API $local_docker_min_api)"
-        else
-            cyber_err "BAD: k3s $k3s_tag (API $api_version) cannot work with your Docker $local_docker_ver (min API $local_docker_min_api)"
-            echo ""
-            echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
-            echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}⚡ SOLUTIONS${CYBER_X}"
-            echo -e "${CYBER_D}│${CYBER_X}"
-            echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}1.${CYBER_X} Upgrade k3s to a version with API >= $local_docker_min_api"
-            echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}2.${CYBER_X} Downgrade Docker to a version with min API <= $api_version"
-            echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}3.${CYBER_X} Use containerd instead of Docker (remove --docker flag)"
-            echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
-        fi
-    fi
-}
-
-check_system() {
-    local k3s_override=$1
-    
-    cyber_step "SYSTEM COMPATIBILITY CHECK"
-    
-    local k3s_ver=${k3s_override:-$(get_k3s_version)}
-    local docker_ver=$(get_docker_version)
-    local docker_api=$(get_docker_api_local)
-    local docker_min_api=$(get_docker_min_api_local)
-    
+    # Show verdict against local Docker
     echo ""
-    echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
-    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}🔍 DETECTED VERSIONS${CYBER_X}"
-    echo -e "${CYBER_D}│${CYBER_X}"
-    if [[ -n "$k3s_override" ]]; then
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}K3S${CYBER_X}     ${CYBER_C}→${CYBER_X} ${CYBER_G}$k3s_ver${CYBER_X} ${CYBER_D}(specified)${CYBER_X}"
+    cyber_step "VERDICT"
+    
+    if compare_versions "$api_version" "$local_docker_min_api"; then
+        cyber_ok "GOOD: k3s $k3s_tag (API $api_version) works with your Docker $local_docker_ver (min API $local_docker_min_api)"
+        return 0
     else
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}K3S${CYBER_X}     ${CYBER_C}→${CYBER_X} ${CYBER_G}$k3s_ver${CYBER_X}"
-    fi
-    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}DOCKER${CYBER_X}  ${CYBER_C}→${CYBER_X} ${CYBER_G}$docker_ver${CYBER_X} ${CYBER_D}(API: $docker_api, Min: $docker_min_api)${CYBER_X}"
-    echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
-    echo ""
-    
-    [[ "$k3s_ver" == "not_installed" ]] && { cyber_warn "k3s not installed (use -k to specify version)"; return 1; }
-    [[ "$docker_ver" == "not_installed" ]] && { cyber_err "Docker not installed"; return 1; }
-    
-    check_k3s_compat "$k3s_ver"
-    
-    echo ""
-    cyber_step "FINAL VERDICT"
-    
-    local cridockerd_ver=$(get_k3s_cridockerd_version "$k3s_ver" 2>/dev/null)
-    local docker_client_ver=$(get_cridockerd_docker_version "$cridockerd_ver" 2>/dev/null)
-    local k3s_api=$(get_docker_api_version "$docker_client_ver" 2>/dev/null)
-    
-    if compare_versions "$k3s_api" "$docker_min_api"; then
-        echo ""
-        cyber_ok "GOOD: k3s $k3s_ver (API $k3s_api) works with Docker $docker_ver (min API $docker_min_api)"
-    else
-        echo ""
-        cyber_err "BAD: k3s $k3s_ver (API $k3s_api) cannot work with Docker $docker_ver (min API $docker_min_api)"
+        cyber_err "BAD: k3s $k3s_tag (API $api_version) cannot work with your Docker $local_docker_ver (min API $local_docker_min_api)"
         echo ""
         echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
         echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}⚡ SOLUTIONS${CYBER_X}"
         echo -e "${CYBER_D}│${CYBER_X}"
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}1.${CYBER_X} Upgrade k3s to a version with API >= $docker_min_api"
-        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}2.${CYBER_X} Downgrade Docker to a version with min API <= $k3s_api"
+        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}1.${CYBER_X} Upgrade k3s to a version with API >= $local_docker_min_api"
+        echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}2.${CYBER_X} Downgrade Docker to a version with min API <= $api_version"
         echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}3.${CYBER_X} Use containerd instead of Docker (remove --docker flag)"
         echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
+        return 1
     fi
 }
 
@@ -331,13 +285,6 @@ echo ""
 while [[ $# -gt 0 ]]; do
     case $1 in
         -k|--k3s-version) check_k3s_compat "$2"; exit $? ;;
-        -c|--check) 
-            if [[ -n "$2" && "$2" != -* ]]; then
-                check_system "$2"; shift
-            else
-                check_system ""
-            fi
-            exit $? ;;
         -l|--list-releases) list_k3s_releases; exit 0 ;;
         -h|--help) print_usage; exit 0 ;;
         *) cyber_err "Unknown option: $1"; print_usage; exit 1 ;;
