@@ -39,6 +39,7 @@ print_usage() {
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_Y}📖 USAGE${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}$0 -k <VERSION>${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_W}INSTALL_K3S_VERSION=<VERSION> $0${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}OPTIONS:${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-k, --k3s-version VERSION${CYBER_X}    Check k3s version against local Docker"
@@ -46,9 +47,13 @@ print_usage() {
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-l, --list-releases${CYBER_X}          List recent k3s releases"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-h, --help${CYBER_X}                   Show this help"
     echo -e "${CYBER_D}│${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}ENVIRONMENT:${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}INSTALL_K3S_VERSION${CYBER_X}          k3s version (alternative to -k flag)"
+    echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}EXAMPLES:${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -k v1.29.0+k3s1${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -k v1.29.0+k3s1 -r 3${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}INSTALL_K3S_VERSION=v1.29.0+k3s1 $0${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -l${CYBER_X}"
     echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
 }
@@ -281,7 +286,7 @@ echo -e "${CYBER_D}                    ╚════════════�
 echo ""
 
 # Parse arguments
-K3S_VERSION=""
+K3S_VERSION="${INSTALL_K3S_VERSION:-}"
 while [[ $# -gt 0 ]]; do
     case $1 in
         -k|--k3s-version) K3S_VERSION="$2"; shift 2 ;;

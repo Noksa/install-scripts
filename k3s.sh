@@ -44,7 +44,7 @@ if [[ "${INSTALL_K3S_EXEC:-}" == *"--docker"* ]] && [[ -z "${K3S_DOCKER_COMPAT_S
     fi
     
     cyber_log "Checking k3s ${INSTALL_K3S_VERSION} compatibility with local Docker..."
-    if ! curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/k3s-docker-compat.sh | bash -s -- -k "${INSTALL_K3S_VERSION}"; then
+    if ! curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/k3s-docker-compat.sh | INSTALL_K3S_VERSION="${INSTALL_K3S_VERSION}" bash; then
         cyber_err "Docker compatibility check failed!"
         echo ""
         echo -en "${CYBER_Y}Do you want to continue anyway? [y/N]${CYBER_X} "
