@@ -69,18 +69,11 @@ get_docker_api_info() {
     local tag=$(curl -sf "https://api.github.com/repos/moby/moby/tags?per_page=100" | \
         jq -r ".[].name" | grep "^v${docker_major}\." | head -1)
     
-    if [[ -z "$tag" ]]; then
-        # Fallback for unreleased versions - Docker 29+ requires minimum 1.44
-        if [[ "$docker_major" -ge 29 ]]; then
-            echo "1.52:1.44"
-            return 0
-        fi
-        echo "unknown:1.24"
-        return 1
-    fi
+    # No tag found = version doesn't exist
+    [[ -z "$tag" ]] && { echo "unknown:unknown"; return 1; }
     
     local api_common=$(curl -sf "https://raw.githubusercontent.com/moby/moby/${tag}/api/common.go")
-    [[ -z "$api_common" ]] && { echo "unknown:1.24"; return 1; }
+    [[ -z "$api_common" ]] && { echo "unknown:unknown"; return 1; }
     
     local default_ver=$(echo "$api_common" | grep 'DefaultVersion.*=' | grep -o '"[0-9.]*"' | tr -d '"' | head -1)
     local min_ver=$(echo "$api_common" | grep 'MinSupportedAPIVersion.*=' | grep -o '"[0-9.]*"' | tr -d '"' | head -1)
