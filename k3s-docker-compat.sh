@@ -11,6 +11,8 @@ set -eo pipefail
 source <(curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/cyberpunk.sh)
 trap 'cyber_trap' SIGINT SIGTERM
 
+VERSION_RANGE=2
+
 
 
 banner() {
@@ -40,11 +42,13 @@ print_usage() {
     echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}OPTIONS:${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-k, --k3s-version VERSION${CYBER_X}    Check k3s version against local Docker"
+    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-r, --range N${CYBER_X}                Docker version range ±N (default: 2)"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-l, --list-releases${CYBER_X}          List recent k3s releases"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_G}-h, --help${CYBER_X}                   Show this help"
     echo -e "${CYBER_D}│${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}  ${CYBER_C}EXAMPLES:${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -k v1.29.0+k3s1${CYBER_X}"
+    echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -k v1.29.0+k3s1 -r 3${CYBER_X}"
     echo -e "${CYBER_D}│${CYBER_X}    ${CYBER_W}$0 -l${CYBER_X}"
     echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
 }
@@ -216,8 +220,8 @@ check_k3s_compat() {
     
     # Get local Docker major version and build range around it
     local local_major=$(echo "$local_docker_ver" | cut -d. -f1)
-    local min_ver=$((local_major - 1))
-    local max_ver=$((local_major + 1))
+    local min_ver=$((local_major - VERSION_RANGE))
+    local max_ver=$((local_major + VERSION_RANGE))
     [[ $min_ver -lt 24 ]] && min_ver=24
     
     echo ""
@@ -282,14 +286,20 @@ echo -e "${CYBER_D}                    ╚════════════�
 echo ""
 
 # Parse arguments
+K3S_VERSION=""
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -k|--k3s-version) check_k3s_compat "$2"; exit $? ;;
+        -k|--k3s-version) K3S_VERSION="$2"; shift 2 ;;
+        -r|--range) VERSION_RANGE="$2"; shift 2 ;;
         -l|--list-releases) list_k3s_releases; exit 0 ;;
         -h|--help) print_usage; exit 0 ;;
         *) cyber_err "Unknown option: $1"; print_usage; exit 1 ;;
     esac
-    shift
 done
+
+if [[ -n "$K3S_VERSION" ]]; then
+    check_k3s_compat "$K3S_VERSION"
+    exit $?
+fi
 
 print_usage
