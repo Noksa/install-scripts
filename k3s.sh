@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-# Reattach stdin to terminal for interactive prompts (needed when running via curl | bash)
-exec < /dev/tty 2>/dev/null || true
-
 # Load cyberpunk theme
 # shellcheck disable=SC1090
 source <(curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/cyberpunk.sh)
@@ -51,12 +48,17 @@ if [[ "${INSTALL_K3S_EXEC:-}" == *"--docker"* ]] && [[ -z "${K3S_DOCKER_COMPAT_S
         cyber_err "Docker compatibility check failed!"
         echo ""
         echo -en "${CYBER_Y}Do you want to continue anyway? [y/N]${CYBER_X} "
-        read -r response
-        if [[ ! "$response" =~ ^[Yy]$ ]]; then
-            cyber_err "Aborted by user"
+        if read -r response < /dev/tty 2>/dev/null; then
+            if [[ "$response" =~ ^[Yy]$ ]]; then
+                cyber_warn "Proceeding despite compatibility warning..."
+            else
+                cyber_err "Aborted by user"
+                exit 1
+            fi
+        else
+            cyber_warn "No TTY for prompt. Use K3S_DOCKER_COMPAT_SKIP=1 to bypass."
             exit 1
         fi
-        cyber_warn "Proceeding despite compatibility warning..."
     fi
     echo ""
 fi
