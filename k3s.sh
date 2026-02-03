@@ -31,6 +31,34 @@ echo ""
 [[ -n "${INSTALL_K3S_EXEC:-}" ]] && export INSTALL_K3S_EXEC
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Check Docker compatibility if --docker is used
+# ═══════════════════════════════════════════════════════════════════════════════
+if [[ "${INSTALL_K3S_EXEC:-}" == *"--docker"* ]]; then
+    cyber_step "PHASE 0: DOCKER COMPATIBILITY CHECK"
+    
+    if [[ -z "${INSTALL_K3S_VERSION:-}" ]]; then
+        cyber_warn "No k3s version specified, fetching latest..."
+        INSTALL_K3S_VERSION=$(curl -sf "https://api.github.com/repos/k3s-io/k3s/releases/latest" | grep -oP '"tag_name":\s*"\K[^"]+')
+        export INSTALL_K3S_VERSION
+        cyber_ok "Latest version: ${INSTALL_K3S_VERSION}"
+    fi
+    
+    cyber_log "Checking k3s ${INSTALL_K3S_VERSION} compatibility with local Docker..."
+    if ! curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/k3s-docker-compat.sh | bash -s -- -k "${INSTALL_K3S_VERSION}"; then
+        cyber_err "Docker compatibility check failed!"
+        echo ""
+        echo -e "${CYBER_Y}Do you want to continue anyway? [y/N]${CYBER_X} "
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            cyber_err "Aborted by user"
+            exit 1
+        fi
+        cyber_warn "Proceeding despite compatibility warning..."
+    fi
+    echo ""
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 cyber_step "PHASE 1: CLEANUP OLD INSTALLATION"
 # ═══════════════════════════════════════════════════════════════════════════════
 
