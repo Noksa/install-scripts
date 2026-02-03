@@ -47,8 +47,8 @@ if [[ "${INSTALL_K3S_EXEC:-}" == *"--docker"* ]]; then
     if ! curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/k3s-docker-compat.sh | bash -s -- -k "${INSTALL_K3S_VERSION}"; then
         cyber_err "Docker compatibility check failed!"
         echo ""
-        echo -e "${CYBER_Y}Do you want to continue anyway? [y/N]${CYBER_X} "
-        read -r response
+        echo -en "${CYBER_Y}Do you want to continue anyway? [y/N]${CYBER_X} "
+        read -r response < /dev/tty
         if [[ ! "$response" =~ ^[Yy]$ ]]; then
             cyber_err "Aborted by user"
             exit 1
