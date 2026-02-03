@@ -61,24 +61,21 @@ ensure_deps() {
 
 
 
-# Fetch both DefaultVersion and MinSupportedAPIVersion from moby/moby
+# Docker version to API version mapping (hardcoded for reliability)
+# Format: "max_api:min_api"
+declare -A DOCKER_API_MAP=(
+    [29]="1.52:1.44"
+    [28]="1.51:1.24"
+    [27]="1.47:1.24"
+    [26]="1.45:1.24"
+    [25]="1.44:1.24"
+    [24]="1.43:1.24"
+    [23]="1.42:1.12"
+)
+
 get_docker_api_info() {
     local docker_major=$1
-    
-    # Find latest tag for this major version
-    local tag=$(curl -sf "https://api.github.com/repos/moby/moby/tags?per_page=100" | \
-        jq -r ".[].name" | grep "^v${docker_major}\." | head -1)
-    
-    # No tag found = version doesn't exist
-    [[ -z "$tag" ]] && { echo "unknown:unknown"; return 1; }
-    
-    local api_common=$(curl -sf "https://raw.githubusercontent.com/moby/moby/${tag}/api/common.go")
-    [[ -z "$api_common" ]] && { echo "unknown:unknown"; return 1; }
-    
-    local default_ver=$(echo "$api_common" | grep 'DefaultVersion.*=' | grep -o '"[0-9.]*"' | tr -d '"' | head -1)
-    local min_ver=$(echo "$api_common" | grep 'MinSupportedAPIVersion.*=' | grep -o '"[0-9.]*"' | tr -d '"' | head -1)
-    
-    echo "${default_ver:-unknown}:${min_ver:-1.24}"
+    echo "${DOCKER_API_MAP[$docker_major]:-unknown:unknown}"
 }
 
 get_k3s_cridockerd_version() {
