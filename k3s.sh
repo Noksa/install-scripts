@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+# Reattach stdin to terminal for interactive prompts (needed when running via curl | bash)
+exec < /dev/tty 2>/dev/null || true
+
 # Load cyberpunk theme
 # shellcheck disable=SC1090
 source <(curl -s https://raw.githubusercontent.com/Noksa/install-scripts/main/cyberpunk.sh)
@@ -33,7 +36,7 @@ echo ""
 # ═══════════════════════════════════════════════════════════════════════════════
 # Check Docker compatibility if --docker is used
 # ═══════════════════════════════════════════════════════════════════════════════
-if [[ "${INSTALL_K3S_EXEC:-}" == *"--docker"* ]]; then
+if [[ "${INSTALL_K3S_EXEC:-}" == *"--docker"* ]] && [[ -z "${K3S_DOCKER_COMPAT_SKIP:-}" ]]; then
     cyber_step "PHASE 0: DOCKER COMPATIBILITY CHECK"
     
     if [[ -z "${INSTALL_K3S_VERSION:-}" ]]; then
@@ -48,7 +51,7 @@ if [[ "${INSTALL_K3S_EXEC:-}" == *"--docker"* ]]; then
         cyber_err "Docker compatibility check failed!"
         echo ""
         echo -en "${CYBER_Y}Do you want to continue anyway? [y/N]${CYBER_X} "
-        read -r response < /dev/tty
+        read -r response
         if [[ ! "$response" =~ ^[Yy]$ ]]; then
             cyber_err "Aborted by user"
             exit 1
