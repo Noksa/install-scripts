@@ -85,15 +85,17 @@ fi
 # ═══════════════════════════════════════════════════════════════════════════════
 cyber_step "PHASE 2: DEPLOY K3S CLUSTER"
 # ═══════════════════════════════════════════════════════════════════════════════
+K3S_URL="${K3S_URL:-https://get.k3s.io}"
+
 
 echo -e "${CYBER_D}┌─────────────────────────────────────────────────────────────────────────────┐${CYBER_X}"
 echo -e "${CYBER_D}│${CYBER_X} ${CYBER_W}HOME${CYBER_X}    ${CYBER_C}→${CYBER_X} ${CYBER_G}$HOME${CYBER_X}"
 echo -e "${CYBER_D}│${CYBER_X} ${CYBER_W}USER${CYBER_X}    ${CYBER_C}→${CYBER_X} ${CYBER_G}$USER${CYBER_X}"
+echo -e "${CYBER_D}│${CYBER_X} ${CYBER_W}K3S_URL${CYBER_X}    ${CYBER_C}→${CYBER_X} ${CYBER_G}${K3S_URL}${CYBER_X}"
 [[ -n "${INSTALL_K3S_VERSION:-}" ]] && echo -e "${CYBER_D}│${CYBER_X} ${CYBER_W}VERSION${CYBER_X} ${CYBER_C}→${CYBER_X} ${CYBER_G}${INSTALL_K3S_VERSION}${CYBER_X}"
 echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
 echo ""
 
-K3S_URL="${K3S_URL:-https://get.k3s.io}"
 cyber_log "Downloading and installing k3s..."
 if curl -sfL "${K3S_URL}" | bash; then
   cyber_ok "K3s installed successfully"
