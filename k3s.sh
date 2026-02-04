@@ -93,8 +93,9 @@ echo -e "${CYBER_D}│${CYBER_X} ${CYBER_W}USER${CYBER_X}    ${CYBER_C}→${CYBE
 echo -e "${CYBER_D}└─────────────────────────────────────────────────────────────────────────────┘${CYBER_X}"
 echo ""
 
+K3S_URL="${K3S_URL:-https://get.k3s.io}"
 cyber_log "Downloading and installing k3s..."
-if curl -sfL https://get.k3s.io | bash; then
+if curl -sfL "${K3S_URL}" | bash; then
   cyber_ok "K3s installed successfully"
 else
   cyber_err "Installation failed!"
